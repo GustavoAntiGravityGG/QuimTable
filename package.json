@@ -1,0 +1,24 @@
+{
+  "name": "quim-table",
+  "version": "1.0.0",
+  "description": "Tabela Periódica Interativa - Interactive Periodic Table with Vercel Web Analytics",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "test": "node test-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GustavoAntiGravityGG/QuimTable.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GustavoAntiGravityGG/QuimTable/issues"
+  },
+  "homepage": "https://github.com/GustavoAntiGravityGG/QuimTable#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
