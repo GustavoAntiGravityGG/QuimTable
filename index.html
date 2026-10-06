@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tabela Periódica Interativa</title>
+<style>
+/* ===== 1. VARIÁVEIS DE COR — tema escuro (padrão) ===== */
+:root{
+  --bg:#eef4ff;--surface:#fff;--text:#0e1d3c;--muted:#5b6b8d;--accent:#2563eb;--accent-fg:#fff;
+  --border:#d0def7;--shadow:0 8px 24px rgba(37,99,235,.14);
+  /* Cores das famílias: fundo (--x) e texto (--x-fg) */
+  --h:#ffd21a;--h-fg:#2b2400;  /* Hidrogênio */
+  --a:#7b4fc9;--a-fg:#fff;     /* Alcalinos */
+  --t:#ffe3b3;--t-fg:#3a2a00;  /* Alcalino-terrosos */
+  --m:#2bc4e0;--m-fg:#06202a;  /* Metais de transição */
+  --o:#2f8f55;--o-fg:#fff;     /* Outros metais */
+  --n:#fff2a6;--n-fg:#3a3300;  /* Não metais */
+  --g:#ff9ec8;--g-fg:#3a0f25;  /* Gases nobres */
+  --s:#5fd6b5;--s-fg:#06281f;  /* Semimetais */
+  --x:#ff8a78;--x-fg:#3a0d08;  /* Halogênios */
+  --l:#a9ecf6;--l-fg:#06202a;  /* Lantanídeos */
+  --c:#0a7f94;--c-fg:#fff;     /* Actinídeos */
+}
+/* Tema escuro (azul-marinho) */
+[data-theme=dark]{
+  --bg:#0a1330;--surface:#111c40;--text:#e8efff;--muted:#9db0d6;--accent:#4c8dff;--accent-fg:#06122e;
+  --border:#23366a;--shadow:0 8px 28px rgba(0,0,0,.5);
+}
+
+/* ===== 2. BASE ===== */
+*{box-sizing:border-box;transition:background-color .35s,border-color .35s,color .35s}
+body{margin:0;font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:.7rem 1.2rem;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow)}
+header h1{margin:0 auto 0 0;font-size:1.15rem;color:var(--accent)}
+nav{display:flex;gap:.4rem}
+.tab,.btn,#theme{border:1px solid var(--border);background:transparent;padding:.5rem .95rem;border-radius:999px;transition:.2s}
+.tab:hover,.btn:hover,#theme:hover{border-color:var(--accent)}
+.tab[aria-selected=true],.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+main{max-width:1280px;margin:0 auto;padding:1.2rem}
+section[hidden]{display:none}
+.hint{text-align:center;color:var(--muted);font-size:.9rem;margin:.2rem 0 1rem}
+
+/* ===== 3. BARRA DE PESQUISA ===== */
+.search{position:relative;max-width:480px;margin:.6rem auto 1rem}
+.search input,#ans{width:100%;padding:.85rem 1.2rem;border-radius:999px;border:2px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:1.05rem;outline:0;box-shadow:var(--shadow)}
+.search input:focus,#ans:focus{border-color:var(--accent)}
+#sug{position:absolute;left:0;right:0;top:calc(100% + 6px);margin:0;padding:.3rem;list-style:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);z-index:15}
+#sug li{display:flex;align-items:center;gap:.7rem;padding:.5rem .8rem;border-radius:10px;cursor:pointer}
+#sug li.on,#sug li:not(.none):hover{background:var(--accent);color:var(--accent-fg)}
+#sug b{min-width:2.2rem}
+#sug small{margin-left:auto;opacity:.8}
+#sug .none{justify-content:center;color:var(--muted);cursor:default}
+
+/* ===== 4. LEGENDA ===== */
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;margin-bottom:1rem}
+.legend button{display:flex;align-items:center;gap:.4rem;padding:.3rem .75rem;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:.8rem}
+.legend i{width:.85rem;height:.85rem;border-radius:50%;background:var(--cc)}
+.legend button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+
+/* ===== 5. TABELA (grade de 18 colunas) ===== */
+.wrap{overflow-x:auto;padding:.6rem .3rem 1rem}
+#grid{display:grid;grid-template-columns:repeat(18,minmax(54px,1fr));grid-template-rows:repeat(7,auto) 14px repeat(2,auto);gap:4px;min-width:1050px}
+.cell{position:relative;min-width:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px;text-align:center;line-height:1.1;overflow:hidden;border-radius:8px;background:var(--cc);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer;transition:filter .25s,transform .15s}
+.cell small{position:absolute;top:3px;left:5px;font-size:.6rem;opacity:.85}
+.cell b{font-size:1.25rem}
+.cell span{max-width:100%;font-size:.52rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell:hover{transform:scale(1.12);z-index:5}
+.cell.dim{filter:brightness(.3) saturate(.7)}  /* efeito de escurecimento */
+.cell.sel{outline:3px solid var(--accent);outline-offset:1px;transform:scale(1.12);z-index:4}
+.cell.ph{cursor:default}
+.cell.ph:hover{transform:none}
+.cell.ph b{font-size:.8rem}
+
+/* ===== 6. CARD DE DETALHES (tooltip) ===== */
+#tip{position:fixed;z-index:50;width:280px;padding:.9rem 1rem;border-radius:14px;background:var(--surface);border:1px solid var(--border);border-left:6px solid var(--cc);box-shadow:var(--shadow);font-size:.82rem;pointer-events:none;opacity:0;transition:opacity .15s}
+#tip.show{opacity:1}
+#tip h3{margin:0 0 .5rem;font-size:1.05rem}
+#tip h3 span{color:var(--muted)}
+#tip dl{display:grid;grid-template-columns:auto 1fr;gap:.25rem .7rem;margin:0}
+#tip dt{color:var(--muted)}
+#tip dd{margin:0;font-weight:600}
+
+/* ===== 7. QUIZ ===== */
+.quiz{max-width:560px;margin:0 auto;text-align:center}
+.modes,.qrow{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem}
+.qcard{position:relative;width:230px;aspect-ratio:1;margin:1.2rem auto;display:flex;align-items:center;justify-content:center;border-radius:24px;background:var(--cc);color:var(--fg);box-shadow:var(--shadow)}
+.qcard.pop{animation:pop .35s}
+.qcard small{position:absolute;top:14px;left:20px;font-size:1.4rem;font-weight:700}
+.qcard b{font-size:5.2rem;line-height:1}
+.qcard b.long{font-size:1.8rem;padding:0 .6rem;overflow-wrap:anywhere}
+@keyframes pop{from{transform:scale(.9);opacity:0}}
+#ans{max-width:300px}
+#fb{min-height:2.6rem;margin:.9rem 0;font-weight:700}
+#fb.ok{color:#16a34a}
+#fb.err{color:#dc2626}
+.score{display:flex;flex-wrap:wrap;justify-content:center;gap:.7rem;margin-top:1.2rem}
+.score div{min-width:96px;padding:.6rem 1rem;border-radius:14px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);color:var(--muted);font-size:.85rem}
+.score strong{display:block;font-size:1.5rem;color:var(--accent)}
+
+@media(max-width:600px){
+  header h1{display:none}
+  nav{margin-right:auto}
+  #tip{left:50%!important;top:auto!important;bottom:12px;transform:translateX(-50%)}  /* no celular: card fixo embaixo */
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚛️ Tabela Periódica</h1>
+  <nav role="tablist">
+    <button class="tab" role="tab" data-sec="sec-tab" aria-selected="true">Tabela Periódica</button>
+    <button class="tab" role="tab" data-sec="sec-quiz" aria-selected="false">Quiz</button>
+  </nav>
+  <button id="theme" title="Alternar tema claro/escuro" aria-label="Alternar tema"></button>
+</header>
+
+<main>
+  <!-- ========== ABA: TABELA ========== -->
+  <section id="sec-tab">
+    <div class="search">
+      <input id="q" type="search" placeholder="Pesquise por símbolo ou nome" autocomplete="off" aria-label="Pesquisar elemento">
+      <ul id="sug" hidden></ul>
+    </div>
+    <p class="hint">Passe o mouse (ou toque) num elemento para ver os detalhes. Clique numa categoria da legenda para destacá-la.</p>
+    <div class="legend" id="legend"></div>
+    <div class="wrap"><div id="grid"></div></div>
+  </section>
+
+  <!-- ========== ABA: QUIZ ========== -->
+  <section id="sec-quiz" hidden>
+    <div class="quiz">
+      <div class="modes">
+        <button class="btn primary" data-mode="sym">Sigla → Nome</button>
+        <button class="btn" data-mode="name">Nome → Sigla</button>
+      </div>
+      <div class="qcard" id="qcard"></div>
+      <div class="qrow">
+        <input id="ans" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Sua resposta">
+        <button class="btn primary" id="send">Responder</button>
+      </div>
+      <div id="fb" role="status"></div>
+      <div class="qrow">
+        <button class="btn" id="next">Próximo elemento</button>
+        <button class="btn" id="reset">Reiniciar quiz</button>
+      </div>
+      <div class="score">
+        <div><strong id="sOk">0</strong>Acertos</div>
+        <div><strong id="sErr">0</strong>Erros</div>
+        <div><strong id="sSt">0</strong>Sequência</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="tip"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+// Remove acentos e maiúsculas (usado na busca e no quiz)
+const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/* ================= 1. DADOS DOS 118 ELEMENTOS ================= */
+// Nomes das categorias (o código de uma letra também é o nome da variável CSS de cor)
+const CATS = {h:'Hidrogênio', a:'Metais alcalinos', t:'Metais alcalino-terrosos', m:'Metais de transição',
+  o:'Outros metais', n:'Não metais', g:'Gases nobres', s:'Semimetais', x:'Halogênios', l:'Lantanídeos', c:'Actinídeos'};
+
+// Categoria de cada elemento, em ordem de número atômico (10 por bloco; o último tem 8)
+const CAT_CODES = 'hgatsnnnxg'+'atosnnxgat'+'mmmmmmmmmm'+'ossnxgatmm'+'mmmmmmmmoo'+'ssxgatllll'
+  +'llllllllll'+'lmmmmmmmmm'+'ooooxgatcc'+'cccccccccc'+'cccmmmmmmm'+'mmooooxg';
+
+// Formato: símbolo | nome | massa atômica (u) | fusão (°C) | ebulição (°C) | descoberta
+// (vazio = desconhecido). O número atômico é a posição da linha (1 a 118).
+const RAW = `
+H|Hidrogênio|1.008|-259.2|-252.9|Henry Cavendish, 1766
+He|Hélio|4.0026||-268.9|Janssen e Lockyer, 1868
+Li|Lítio|6.94|180.5|1342|Johan Arfwedson, 1817
+Be|Berílio|9.0122|1287|2470|Louis Vauquelin, 1798
+B|Boro|10.81|2076|3927|Gay-Lussac e Thénard, 1808
+C|Carbono|12.011|3550|4027|Antiguidade
+N|Nitrogênio|14.007|-210|-195.8|Daniel Rutherford, 1772
+O|Oxigênio|15.999|-218.8|-183|Scheele e Priestley, 1774
+F|Flúor|18.998|-219.7|-188.1|Henri Moissan, 1886
+Ne|Neônio|20.18|-248.6|-246.1|Ramsay e Travers, 1898
+Na|Sódio|22.99|97.8|883|Humphry Davy, 1807
+Mg|Magnésio|24.305|650|1090|Humphry Davy, 1808
+Al|Alumínio|26.982|660.3|2519|Hans Ørsted, 1825
+Si|Silício|28.085|1414|3265|Jöns Berzelius, 1824
+P|Fósforo|30.974|44.2|280.5|Hennig Brand, 1669
+S|Enxofre|32.06|115.2|444.6|Antiguidade
+Cl|Cloro|35.45|-101.5|-34|Carl Scheele, 1774
+Ar|Argônio|39.948|-189.3|-185.8|Rayleigh e Ramsay, 1894
+K|Potássio|39.098|63.5|759|Humphry Davy, 1807
+Ca|Cálcio|40.078|842|1484|Humphry Davy, 1808
+Sc|Escândio|44.956|1541|2836|Lars Nilson, 1879
+Ti|Titânio|47.867|1668|3287|William Gregor, 1791
+V|Vanádio|50.942|1910|3407|Andrés del Río, 1801
+Cr|Cromo|51.996|1907|2671|Louis Vauquelin, 1797
+Mn|Manganês|54.938|1246|2061|Johan Gahn, 1774
+Fe|Ferro|55.845|1538|2861|Antiguidade
+Co|Cobalto|58.933|1495|2927|Georg Brandt, 1735
+Ni|Níquel|58.693|1455|2913|Axel Cronstedt, 1751
+Cu|Cobre|63.546|1085|2562|Antiguidade
+Zn|Zinco|65.38|419.5|907|Andreas Marggraf, 1746
+Ga|Gálio|69.723|29.8|2204|Lecoq de Boisbaudran, 1875
+Ge|Germânio|72.63|938.3|2833|Clemens Winkler, 1886
+As|Arsênio|74.922|817|614|Antiguidade
+Se|Selênio|78.971|221|685|Jöns Berzelius, 1817
+Br|Bromo|79.904|-7.2|58.8|Antoine Balard, 1826
+Kr|Criptônio|83.798|-157.4|-153.4|Ramsay e Travers, 1898
+Rb|Rubídio|85.468|39.3|688|Bunsen e Kirchhoff, 1861
+Sr|Estrôncio|87.62|777|1377|Adair Crawford, 1790
+Y|Ítrio|88.906|1526|3345|Johan Gadolin, 1794
+Zr|Zircônio|91.224|1855|4409|Martin Klaproth, 1789
+Nb|Nióbio|92.906|2477|4744|Charles Hatchett, 1801
+Mo|Molibdênio|95.95|2623|4639|Carl Scheele, 1778
+Tc|Tecnécio|98|2157|4265|Perrier e Segrè, 1937
+Ru|Rutênio|101.07|2334|4150|Karl Claus, 1844
+Rh|Ródio|102.91|1964|3695|William Wollaston, 1803
+Pd|Paládio|106.42|1555|2963|William Wollaston, 1803
+Ag|Prata|107.87|961.8|2162|Antiguidade
+Cd|Cádmio|112.41|321.1|767|Friedrich Stromeyer, 1817
+In|Índio|114.82|156.6|2072|Reich e Richter, 1863
+Sn|Estanho|118.71|231.9|2602|Antiguidade
+Sb|Antimônio|121.76|630.6|1587|Antiguidade
+Te|Telúrio|127.6|449.5|988|Franz Müller, 1782
+I|Iodo|126.9|113.7|184.3|Bernard Courtois, 1811
+Xe|Xenônio|131.29|-111.8|-108.1|Ramsay e Travers, 1898
+Cs|Césio|132.91|28.4|671|Bunsen e Kirchhoff, 1860
+Ba|Bário|137.33|727|1845|Carl Scheele, 1772
+La|Lantânio|138.91|920|3464|Carl Mosander, 1839
+Ce|Cério|140.12|795|3443|Berzelius e Hisinger, 1803
+Pr|Praseodímio|140.91|935|3520|Carl von Welsbach, 1885
+Nd|Neodímio|144.24|1024|3074|Carl von Welsbach, 1885
+Pm|Promécio|145|1042|3000|Marinsky e Glendenin, 1945
+Sm|Samário|150.36|1072|1794|Lecoq de Boisbaudran, 1879
+Eu|Európio|151.96|826|1529|Eugène Demarçay, 1901
+Gd|Gadolínio|157.25|1312|3273|Jean de Marignac, 1880
+Tb|Térbio|158.93|1356|3230|Carl Mosander, 1843
+Dy|Disprósio|162.5|1407|2567|Lecoq de Boisbaudran, 1886
+Ho|Hólmio|164.93|1461|2720|Per Cleve, 1878
+Er|Érbio|167.26|1529|2868|Carl Mosander, 1843
+Tm|Túlio|168.93|1545|1950|Per Cleve, 1879
+Yb|Itérbio|173.05|824|1196|Jean de Marignac, 1878
+Lu|Lutécio|174.97|1652|3402|Georges Urbain, 1907
+Hf|Háfnio|178.49|2233|4603|Coster e Hevesy, 1923
+Ta|Tântalo|180.95|3017|5458|Anders Ekeberg, 1802
+W|Tungstênio|183.84|3422|5555|Irmãos Elhuyar, 1783
+Re|Rênio|186.21|3186|5596|Noddack, Tacke e Berg, 1925
+Os|Ósmio|190.23|3033|5012|Smithson Tennant, 1803
+Ir|Irídio|192.22|2446|4428|Smithson Tennant, 1803
+Pt|Platina|195.08|1768|3825|Antonio de Ulloa, 1735
+Au|Ouro|196.97|1064|2856|Antiguidade
+Hg|Mercúrio|200.59|-38.8|356.7|Antiguidade
+Tl|Tálio|204.38|304|1473|William Crookes, 1861
+Pb|Chumbo|207.2|327.5|1749|Antiguidade
+Bi|Bismuto|208.98|271.4|1564|Antiguidade
+Po|Polônio|209|254|962|Marie e Pierre Curie, 1898
+At|Astato|210|302|337|Corson, MacKenzie e Segrè, 1940
+Rn|Radônio|222|-71|-61.7|Friedrich Dorn, 1900
+Fr|Frâncio|223|27|677|Marguerite Perey, 1939
+Ra|Rádio|226|700|1737|Marie e Pierre Curie, 1898
+Ac|Actínio|227|1050|3198|André Debierne, 1899
+Th|Tório|232.04|1750|4788|Jöns Berzelius, 1829
+Pa|Protactínio|231.04|1572|4000|Hahn e Meitner, 1917
+U|Urânio|238.03|1135|4131|Martin Klaproth, 1789
+Np|Netúnio|237|644|3900|McMillan e Abelson, 1940
+Pu|Plutônio|244|640|3228|Glenn Seaborg et al., 1940
+Am|Amerício|243|1176|2011|Glenn Seaborg et al., 1944
+Cm|Cúrio|247|1340|3110|Glenn Seaborg et al., 1944
+Bk|Berquélio|247|986|2627|Glenn Seaborg et al., 1949
+Cf|Califórnio|251|900|1470|Glenn Seaborg et al., 1950
+Es|Einstênio|252|860||Albert Ghiorso et al., 1952
+Fm|Férmio|257|1527||Albert Ghiorso et al., 1952
+Md|Mendelévio|258|827||Albert Ghiorso et al., 1955
+No|Nobélio|259|827||Dubna e Berkeley, 1958
+Lr|Laurêncio|266|1627||Albert Ghiorso et al., 1961
+Rf|Rutherfórdio|267|||Dubna, 1964
+Db|Dúbnio|268|||Dubna, 1968
+Sg|Seabórgio|269|||Berkeley, 1974
+Bh|Bóhrio|270|||Armbruster e Münzenberg, 1981
+Hs|Hássio|277|||Armbruster e Münzenberg, 1984
+Mt|Meitnério|278|||Armbruster e Münzenberg, 1982
+Ds|Darmstádio|281|||Hofmann et al. (GSI), 1994
+Rg|Roentgênio|282|||Hofmann et al. (GSI), 1994
+Cn|Copernício|285|||Hofmann et al. (GSI), 1996
+Nh|Nihônio|286|||RIKEN (Morita), 2004
+Fl|Fleróvio|289|||Dubna (Oganessian), 1998
+Mc|Moscóvio|290|||Dubna e Livermore, 2003
+Lv|Livermório|293|||Dubna e Livermore, 2000
+Ts|Tenessino|294|||Dubna, ORNL e Vanderbilt, 2010
+Og|Oganessônio|294|||Dubna e Livermore, 2002`;
+
+/* Configuração eletrônica: calculada pelo diagrama de Linus Pauling, com as exceções conhecidas */
+const SUB = [['1s',2],['2s',2],['2p',6],['3s',2],['3p',6],['4s',2],['3d',10],['4p',6],['5s',2],['4d',10],
+  ['5p',6],['6s',2],['4f',14],['5d',10],['6p',6],['7s',2],['5f',14],['6d',10],['7p',6]];
+const NG = [[86,'Rn',15],[54,'Xe',11],[36,'Kr',8],[18,'Ar',5],[10,'Ne',3],[2,'He',1]]; // [Z do gás nobre, símbolo, 1º subnível depois dele]
+const EXC = {24:'3d5 4s1',29:'3d10 4s1',41:'4d4 5s1',42:'4d5 5s1',44:'4d7 5s1',45:'4d8 5s1',46:'4d10',47:'4d10 5s1',
+  57:'5d1 6s2',58:'4f1 5d1 6s2',64:'4f7 5d1 6s2',78:'4f14 5d9 6s1',79:'4f14 5d10 6s1',89:'6d1 7s2',90:'6d2 7s2',
+  91:'5f2 6d1 7s2',92:'5f3 6d1 7s2',93:'5f4 6d1 7s2',96:'5f7 6d1 7s2',103:'5f14 7s2 7p1'};
+function config(z){
+  const g = NG.find(x => x[0] < z), pre = g ? `[${g[1]}] ` : '';
+  if (EXC[z]) return pre + EXC[z];
+  let n = z - (g ? g[0] : 0); const out = [];
+  for (let i = g ? g[2] : 0; n > 0; i++){ const k = Math.min(n, SUB[i][1]); out.push(SUB[i][0] + k); n -= k; }
+  out.sort((a,b) => a[0]-b[0] || 'spdf'.indexOf(a[1]) - 'spdf'.indexOf(b[1]));
+  return pre + out.join(' ');
+}
+
+// Array final: um objeto por elemento (a categoria define a cor)
+const ELEMENTS = RAW.trim().split('\n').map((l, i) => {
+  const [sym, nome, massa, f, e, desc] = l.split('|'), num = v => v === '' ? null : +v;
+  const fusao = num(f), ebul = num(e);
+  return { z:i+1, sym, nome, massa:+massa, cat:CAT_CODES[i], fusao, ebul, desc, config:config(i+1),
+    // estado físico a 25 °C, deduzido dos pontos de fusão/ebulição
+    estado: ebul !== null && ebul < 25 ? 'Gasoso' : fusao !== null && fusao < 25 ? 'Líquido' : fusao !== null ? 'Sólido' : 'Desconhecido' };
+});
+
+/* ================= 2. TEMA ================= */
+const root = document.documentElement, themeBtn = $('#theme');
+function applyTheme(t){ root.dataset.theme = t; themeBtn.textContent = t === 'dark' ? '☀️' : '🌙'; }
+let saved = null; try { saved = localStorage.getItem('tema'); } catch(e){}
+applyTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); // 1ª visita: tema do sistema
+themeBtn.onclick = () => {
+  const t = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(t); try { localStorage.setItem('tema', t); } catch(e){}
+};
+
+/* ================= 3. NAVEGAÇÃO ================= */
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t === b));
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== b.dataset.sec);
+  hideTip();
+  if (b.dataset.sec === 'sec-quiz') ans.focus();
+});
+
+/* ================= 4. TABELA PERIÓDICA ================= */
+// Posição [linha, coluna] na grade; linhas 9 e 10 = lantanídeos e actinídeos
+function pos(z){
+  if (z === 1) return [1,1];   if (z === 2) return [1,18];
+  if (z <= 4)  return [2,z-2]; if (z <= 10) return [2,z+8];
+  if (z <= 12) return [3,z-10];if (z <= 18) return [3,z];
+  if (z <= 36) return [4,z-18];if (z <= 54) return [5,z-36];
+  if (z <= 56) return [6,z-54];if (z <= 71) return [9,z-54];
+  if (z <= 86) return [6,z-68];if (z <= 88) return [7,z-86];
+  if (z <= 103) return [10,z-86];
+  return [7,z-100];
+}
+const grid = $('#grid'), cells = [];
+let hover = 0, cat = null, sel = 0;   // estado: elemento sob o mouse, categoria da legenda, elemento pesquisado
+
+// Escurece tudo que não corresponde ao foco atual (hover > pesquisa > legenda)
+function paint(){
+  cells.forEach(c => {
+    const on = hover ? c.z === hover : sel ? c.z === sel : cat ? c.cat === cat : true;
+    c.d.classList.toggle('dim', !on);
+    c.d.classList.toggle('sel', c.z === sel && !hover);
+  });
+}
+function addCell(d, z, ct, r, c){
+  d.style.cssText = `grid-area:${r}/${c};--cc:var(--${ct});--fg:var(--${ct}-fg)`;
+  grid.append(d); cells.push({ d, z, cat:ct });
+}
+ELEMENTS.forEach(e => {
+  const d = document.createElement('div'), [r, c] = pos(e.z);
+  d.className = 'cell';
+  d.innerHTML = `<small>${e.z}</small><b>${e.sym}</b><span>${e.nome}</span>`;
+  d.onmouseenter = () => { hover = e.z; paint(); showTip(e, d); };
+  d.onmouseleave = () => { hover = 0; paint(); hideTip(); };
+  d.onclick = ev => { ev.stopPropagation(); hover = e.z; paint(); showTip(e, d); }; // toque no celular
+  addCell(d, e.z, e.cat, r, c);
+});
+// Marcadores "57–71" e "89–103" no corpo da tabela
+[['57–71','l',6],['89–103','c',7]].forEach(([t, ct, r]) => {
+  const d = document.createElement('div'); d.className = 'cell ph'; d.innerHTML = `<b>${t}</b>`;
+  addCell(d, -1, ct, r, 3);
+});
+// Toque/clique fora: fecha card e sugestões
+document.addEventListener('click', ev => {
+  if (!ev.target.closest('.search')) sug.hidden = true;
+  hover = 0; paint(); hideTip();
+});
+
+/* --- Legenda clicável --- */
+const legend = $('#legend'), lb = {};
+function focusCat(k){ cat = k; for (const x in lb) lb[x].classList.toggle('on', x === k); }
+Object.entries(CATS).forEach(([k, nome]) => {
+  const b = document.createElement('button');
+  b.style.setProperty('--cc', `var(--${k})`); b.innerHTML = `<i></i>${nome}`;
+  b.onclick = () => { focusCat(cat === k ? null : k); sel = 0; q.value = ''; sug.hidden = true; paint(); };
+  lb[k] = b; legend.append(b);
+});
+
+/* --- Card de detalhes --- */
+const tip = $('#tip');
+const fmt = v => v === null ? '—' : String(v).replace('.', ',') + ' °C';
+function showTip(e, d){
+  tip.style.setProperty('--cc', `var(--${e.cat})`);
+  const eb = e.ebul !== null && e.fusao !== null && e.ebul < e.fusao ? 'sublima a ' + fmt(e.ebul) : fmt(e.ebul);
+  tip.innerHTML = `<h3>${e.nome} <span>(${e.sym})</span></h3><dl>
+    <dt>Nº atômico</dt><dd>${e.z}</dd>
+    <dt>Massa atômica</dt><dd>${String(e.massa).replace('.', ',')} u</dd>
+    <dt>Categoria</dt><dd>${CATS[e.cat]}</dd>
+    <dt>Estado físico</dt><dd>${e.estado}</dd>
+    <dt>Config. eletrônica</dt><dd>${e.config.replace(/(\d[spdf])(\d+)/g, '$1<sup>$2</sup>')}</dd>
+    <dt>Ponto de fusão</dt><dd>${fmt(e.fusao)}</dd>
+    <dt>Ponto de ebulição</dt><dd>${eb}</dd>
+    <dt>Descoberta</dt><dd>${e.desc}</dd></dl>`;
+  const r = d.getBoundingClientRect();
+  let x = r.right + 10; if (x + 280 > innerWidth - 8) x = r.left - 290;
+  tip.style.left = Math.max(8, x) + 'px';
+  tip.style.top = Math.max(8, Math.min(r.top - 20, innerHeight - tip.offsetHeight - 8)) + 'px';
+  tip.classList.add('show');
+}
+function hideTip(){ tip.classList.remove('show'); }
+
+/* --- Barra de pesquisa --- */
+const q = $('#q'), sug = $('#sug'); let items = [], act = 0;
+function search(v){
+  v = norm(v); if (!v) return [];
+  return ELEMENTS.map(e => { const s = norm(e.sym), n = norm(e.nome);
+      const r = s === v || n === v || String(e.z) === v ? 0 : s.startsWith(v) || n.startsWith(v) ? 1 : n.includes(v) ? 2 : 9;
+      return { e, r }; })
+    .filter(x => x.r < 9).sort((a, b) => a.r - b.r || a.e.z - b.e.z).slice(0, 8).map(x => x.e);
+}
+function showSug(){
+  if (!q.value.trim()){ sug.hidden = true; return; }
+  items = search(q.value); act = 0;
+  sug.innerHTML = items.length
+    ? items.map((e, i) => `<li data-i="${i}" class="${i === act ? 'on' : ''}"><b>${e.sym}</b>${e.nome}<small>nº ${e.z}</small></li>`).join('')
+    : '<li class="none">Nenhum elemento encontrado</li>';
+  sug.hidden = false;
+}
+function pick(e){
+  sel = e.z; focusCat(null); q.value = e.nome; sug.hidden = true; paint();
+  cells.find(c => c.z === e.z).d.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+}
+function clearSearch(){ q.value = ''; sug.hidden = true; sel = 0; paint(); }
+q.oninput = () => { if (!q.value.trim()) clearSearch(); else showSug(); };
+q.onfocus = () => { if (q.value.trim()) showSug(); };
+q.onkeydown = ev => {
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+    ev.preventDefault();
+    if (items.length && !sug.hidden){
+      act = (act + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      [...sug.children].forEach((li, i) => li.classList.toggle('on', i === act));
+    }
+  } else if (ev.key === 'Enter'){
+    ev.preventDefault();
+    if (q.value.trim() && items[act]) pick(items[act]); else { sel = 0; paint(); }
+  } else if (ev.key === 'Escape') clearSearch();
+};
+sug.onclick = ev => { const li = ev.target.closest('li[data-i]'); if (li) pick(items[li.dataset.i]); };
+
+/* ================= 5. QUIZ ================= */
+const card = $('#qcard'), ans = $('#ans'), fb = $('#fb');
+let mode = 'sym', deck = [], cur = null, answered = false, st = {};
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+function score(){ $('#sOk').textContent = st.ok; $('#sErr').textContent = st.err; $('#sSt').textContent = st.streak; }
+function resetQuiz(){
+  deck = shuffle(ELEMENTS.slice());            // sorteio sem repetição: tira um por vez do baralho
+  st = { ok:0, err:0, streak:0 };
+  ans.placeholder = mode === 'sym' ? 'Digite o nome do elemento' : 'Digite a sigla do elemento';
+  score(); nextQ();
+}
+function nextQ(){
+  fb.textContent = ''; fb.className = ''; ans.value = ''; ans.readOnly = false; answered = false;
+  if (!deck.length){
+    cur = null; card.style.cssText = '--cc:var(--m);--fg:var(--m-fg)'; card.innerHTML = '<b class="long">🏁 Fim!</b>';
+    fb.textContent = 'Você passou por todos os 118 elementos! Clique em "Reiniciar quiz" para jogar de novo.'; return;
+  }
+  cur = deck.pop();
+  card.style.cssText = `--cc:var(--${cur.cat});--fg:var(--${cur.cat}-fg)`;  // cor da família, como na tabela
+  card.innerHTML = `<small>${cur.z}</small><b class="${mode === 'name' ? 'long' : ''}">${mode === 'sym' ? cur.sym : cur.nome}</b>`;
+  card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+  ans.focus();
+}
+function answer(){
+  if (answered || !cur || !ans.value.trim()) return;
+  answered = true; ans.readOnly = true;
+  const certo = mode === 'sym' ? cur.nome : cur.sym, ok = norm(ans.value) === norm(certo);
+  if (ok){ st.ok++; st.streak++; } else { st.err++; st.streak = 0; }
+  fb.className = ok ? 'ok' : 'err';
+  fb.textContent = mode === 'sym'
+    ? (ok ? 'Parabéns! Você acertou o nome do elemento! 🎉' : `Resposta errada! O nome correto é ${certo}.`)
+    : (ok ? 'Parabéns! Você acertou a sigla do elemento! 🎉' : `Resposta errada! A sigla correta é ${certo}.`);
+  score();
+}
+ans.onkeydown = ev => { if (ev.key === 'Enter'){ ev.preventDefault(); answered ? nextQ() : answer(); } };
+$('#send').onclick = answer;
+$('#next').onclick = nextQ;
+$('#reset').onclick = resetQuiz;
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('primary', x === b));
+  resetQuiz();
+});
+resetQuiz();
+</script>
+</body>
+</html>
